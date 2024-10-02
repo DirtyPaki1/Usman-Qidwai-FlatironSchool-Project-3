@@ -97,7 +97,7 @@ if __name__ == '__main__':
     spring_2023 = Season.create(session, "Spring", 2023)
     
     # Create sample anime series
-    AnimeSeries.create(session, "Attack on Titan", "Action", 25, 9.5, winter_2023.id)
+    AnimeSeries.create(session, "Dragon Ball Z", "Action", 25, 9.5, winter_2023.id)
     AnimeSeries.create(session, "Demon Slayer", "Fantasy", 26, 9.0, spring_2023.id)
     
     session.close()
