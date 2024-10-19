@@ -1,199 +1,129 @@
+import os
+from anime_tracker_db import Season, AnimeSeries, get_session, close_connection, initialize_database
 import click
-from anime_tracker_db import Season, AnimeSeries, get_session
-import time
 
-@click.group()
-def cli():
-    """Anime Tracker CLI"""
-    pass
+def create_season(session, name, year):
+    season = Season(name=name, year=year)
+    session.add(season)
+    session.commit()
+    print(f"Created season: {season}")
 
-@cli.command('seasons')
-def list_seasons():
-    """List all seasons"""
-    with get_session() as session:
-        seasons = Season.get_all(session)
-        if not seasons:
-            print("No seasons found.")
-            return
-        
-        print("\nAvailable Seasons:")
-        for i, season in enumerate(seasons, start=1):
-            print(f"{i}. {season.name} ({season.year})")
+def delete_season(session, season_id):
+    season = session.query(Season).filter_by(id=season_id).first()
+    if season:
+        session.delete(season)
+        session.commit()
+        print(f"Deleted season: {season}")
+    else:
+        print("Season not found.")
 
-@cli.command('add_season')
-def add_season():
-    """Add a new season"""
-    name = input("Enter season name: ")
-    year = int(input("Enter year: "))
-    
-    with get_session() as session:
-        existing_season = session.query(Season).filter_by(name=name, year=year).first()
-        if existing_season:
-            print("Season already exists.")
-            return
-        
-        season = Season.create(session, name, year)
-        print(f"Added '{name}' ({year})")
+def display_all_seasons(session):
+    seasons = session.query(Season).all()
+    for season in seasons:
+        print(season)
 
-@cli.command('delete_season')
-def delete_season():
-    """Delete a season"""
-    with get_session() as session:
-        seasons = Season.get_all(session)
-        if not seasons:
-            print("No seasons found.")
-            return
-        
-        print("\nAvailable Seasons:")
-        for i, season in enumerate(seasons, start=1):
-            print(f"{i}. {season.name} ({season.year})")
-        
-        while True:
-            try:
-                choice = int(input("\nEnter the number of the season to delete, or 0 to cancel: "))
-                if choice == 0:
-                    print("Operation cancelled.")
-                    return
-                
-                if 1 <= choice <= len(seasons):
-                    selected_season = seasons[choice - 1]
-                    Season.delete_by_id(session, selected_season.id)
-                    print(f"Deleted '{selected_season.name}' ({selected_season.year})")
-                    break
-                else:
-                    print("Invalid choice. Please try again.")
-            except ValueError:
-                print("Invalid input. Please enter a number.")
+def view_season_anime_series(session, season_id):
+    season = session.query(Season).filter_by(id=season_id).first()
+    if season:
+        anime_series = season.anime_series
+        print(f"Anime Series for season '{season.name} ({season.year}'):")
+        for series in anime_series:
+            print(series.title)
+    else:
+        print("Season not found.")
 
-@cli.command('view_season')
-def view_season():
-    """View details of a season"""
-    with get_session() as session:
-        seasons = Season.get_all(session)
-        if not seasons:
-            print("No seasons found.")
-            return
-        
-        print("\nAvailable Seasons:")
-        for i, season in enumerate(seasons, start=1):
-            print(f"{i}. {season.name} ({season.year})")
-        
-        while True:
-            try:
-                choice = int(input("\nEnter the number of the season to view, or 0 to cancel: "))
-                if choice == 0:
-                    print("Operation cancelled.")
-                    return
-                
-                if 1 <= choice <= len(seasons):
-                    selected_season = seasons[choice - 1]
-                    
-                    print(f"\nSeason: {selected_season.name} ({selected_season.year})\n")
-                    
-                    anime_series = AnimeSeries.get_all_by_season(session, selected_season.id)
-                    
-                    if anime_series:
-                        print("Anime Series:")
-                        for i, series in enumerate(anime_series, start=1):
-                            print(f"{i}. {series.title}")
-                        
-                        while True:
-                            action = input("\nEnter 'v' to view details, 'a' to add, 'd' to delete, or 'q' to quit: ").lower()
-                            if action == 'q':
-                                break
-                            
-                            elif action == 'v':
-                                series_choice = int(input("Enter the number of the anime series to view: "))
-                                if 1 <= series_choice <= len(anime_series):
-                                    selected_series = anime_series[series_choice - 1]
-                                    print(f"\nTitle: {selected_series.title}")
-                                    print(f"Genre: {selected_series.genre}")
-                                    print(f"Episodes: {selected_series.episodes}")
-                                    print(f"Rating: {selected_series.rating:.2f}/10\n")
-                                else:
-                                    print("Invalid choice.")
-                            
-                            elif action == 'a':
-                                title = input("Enter new title: ")
-                                genre = input("Enter genre: ")
-                                episodes = int(input("Enter number of episodes: "))
-                                rating = float(input("Enter rating (out of 10): "))
-                                
-                                # Check if the anime series already exists
-                                existing_series = session.query(AnimeSeries).filter(
-                                    AnimeSeries.title == title,
-                                    AnimeSeries.season_id == selected_season.id
-                                ).first()
-                                
-                                if existing_series:
-                                    print(f"'{title}' already exists in this season.")
-                                else:
-                                    new_series = AnimeSeries.create(session, title, genre, episodes, rating, selected_season.id)
-                                    print(f"Added '{title}'")
-                                
-                            elif action == 'd':
-                                series_choice = int(input("Enter the number of the anime series to delete: "))
-                                if 1 <= series_choice <= len(anime_series):
-                                    selected_series = anime_series[series_choice - 1]
-                                    AnimeSeries.delete_by_id(session, selected_series.id)
-                                    print(f"Deleted '{selected_series.title}'")
-                                else:
-                                    print("Invalid choice.")
-                            
-                            else:
-                                print("Invalid action. Please try again.")
-                    else:
-                        print("No anime series found for this season.")
-                else:
-                    print("Invalid choice. Please try again.")
-            except ValueError:
-                print("Invalid input. Please enter a number.")
+def find_season_by_name_year(session, name, year):
+    season = session.query(Season).filter(Season.name.like(f"%{name}%"), Season.year == year).first()
+    if season:
+        print(f"Found season: {season}")
+    else:
+        print("Season not found.")
 
-@cli.command('add_anime_to_season')
-def add_anime_to_season():
-    """Add an anime series to a season"""
-    with get_session() as session:
-        seasons = Season.get_all(session)
-        if not seasons:
-            print("No seasons found.")
-            return
-        
-        print("\nAvailable Seasons:")
-        for i, season in enumerate(seasons, start=1):
-            print(f"{i}. {season.name} ({season.year})")
-        
-        while True:
-            try:
-                season_choice = int(input("\nEnter the number of the season to add anime to, or 0 to cancel: "))
-                if season_choice == 0:
-                    print("Operation cancelled.")
-                    return
-                
-                if 1 <= season_choice <= len(seasons):
-                    selected_season = seasons[season_choice - 1]
-                    
-                    title = input("Enter new title: ")
-                    genre = input("Enter genre: ")
-                    episodes = int(input("Enter number of episodes: "))
-                    rating = float(input("Enter rating (out of 10): "))
-                    
-                    # Check if the anime series already exists
-                    existing_series = session.query(AnimeSeries).filter(
-                        AnimeSeries.title == title,
-                        AnimeSeries.season_id == selected_season.id
-                    ).first()
-                    
-                    if existing_series:
-                        print(f"'{title}' already exists in this season.")
-                    else:
-                        new_series = AnimeSeries.create(session, title, genre, episodes, rating, selected_season.id)
-                        print(f"Added '{title}' to season '{selected_season.name}' ({selected_season.year})")
-                    break
-                else:
-                    print("Invalid choice. Please try again.")
-            except ValueError:
-                print("Invalid input. Please enter a number.")
+def create_anime_series(session, title, genre, episodes, rating, season_id):
+    anime_series = AnimeSeries(title=title, genre=genre, episodes=episodes, rating=rating, season_id=season_id)
+    session.add(anime_series)
+    session.commit()
+    print(f"Added anime series: {anime_series}")
+
+def delete_anime_series(session, anime_series_id):
+    anime_series = session.query(AnimeSeries).filter_by(id=anime_series_id).first()
+    if anime_series:
+        session.delete(anime_series)
+        session.commit()
+        print(f"Deleted anime series: {anime_series}")
+    else:
+        print("Anime series not found.")
+
+def display_all_anime_series(session):
+    anime_series = session.query(AnimeSeries).all()
+    for series in anime_series:
+        print(series)
+
+def find_anime_series_by_title(session, title):
+    anime_series = session.query(AnimeSeries).filter(AnimeSeries.title.like(f"%{title}%")).first()
+    if anime_series:
+        print(f"Found anime series: {anime_series}")
+    else:
+        print("Anime series not found.")
+
+def main():
+    # Initialize the database
+    initialize_database()
+
+    session = get_session()
+
+    while True:
+        print("\nAnime Tracker Menu:")
+        print("1. Add Season")
+        print("2. Delete Season")
+        print("3. Display All Seasons")
+        print("4. View Anime Series for Season")
+        print("5. Find Season by Name and Year")
+        print("6. Add Anime Series")
+        print("7. Delete Anime Series")
+        print("8. Display All Anime Series")
+        print("9. Find Anime Series by Title")
+        print("10. Exit")
+
+        choice = input("Enter your choice (1-10): ")
+
+        if choice == '1':
+            name = input("Enter season name: ")
+            year = int(input("Enter season year: "))
+            create_season(session, name, year)
+        elif choice == '2':
+            season_id = int(input("Enter season ID to delete: "))
+            delete_season(session, season_id)
+        elif choice == '3':
+            display_all_seasons(session)
+        elif choice == '4':
+            season_id = int(input("Enter season ID to view anime series: "))
+            view_season_anime_series(session, season_id)
+        elif choice == '5':
+            name = input("Enter partial season name to search: ")
+            year = int(input("Enter season year: "))
+            find_season_by_name_year(session, name, year)
+        elif choice == '6':
+            title = input("Enter anime series title: ")
+            genre = input("Enter genre: ")
+            episodes = int(input("Enter number of episodes: "))
+            rating = float(input("Enter rating (out of 10): "))
+            season_id = int(input("Enter season ID: "))
+            create_anime_series(session, title, genre, episodes, rating, season_id)
+        elif choice == '7':
+            anime_series_id = int(input("Enter anime series ID to delete: "))
+            delete_anime_series(session, anime_series_id)
+        elif choice == '8':
+            display_all_anime_series(session)
+        elif choice == '9':
+            title = input("Enter partial anime series title to search: ")
+            find_anime_series_by_title(session, title)
+        elif choice == '10':
+            print("Exiting...")
+            close_connection(session)
+            break
+        else:
+            print("Invalid choice. Please try again.")
 
 if __name__ == "__main__":
-    cli()
-
+    main()
