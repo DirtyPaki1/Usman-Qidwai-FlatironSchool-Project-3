@@ -1,129 +1,139 @@
-import os
-from anime_tracker_db import Season, AnimeSeries, get_session, close_connection, initialize_database
 import click
+from anime_tracker_db import get_session, initialize_database, AnimeShow, Episode, Character
+from datetime import date
 
-def create_season(session, name, year):
-    season = Season(name=name, year=year)
-    session.add(season)
-    session.commit()
-    print(f"Created season: {season}")
+# CLI helper functions
+def display_anime_shows(shows):
+    click.echo("\nAvailable Anime Shows:")
+    for i, show in enumerate(shows, start=1):
+        click.echo(f"{i}. {show.title}")
 
-def delete_season(session, season_id):
-    season = session.query(Season).filter_by(id=season_id).first()
-    if season:
-        session.delete(season)
-        session.commit()
-        print(f"Deleted season: {season}")
-    else:
-        print("Season not found.")
+def display_episodes(episodes):
+    click.echo("\nAvailable Episodes:")
+    for i, episode in enumerate(episodes, start=1):
+        watched_status = "Watched" if episode.watched else "Not Watched"
+        click.echo(f"{i}. Episode {episode.episode_number} ({watched_status})")
 
-def display_all_seasons(session):
-    seasons = session.query(Season).all()
-    for season in seasons:
-        print(season)
+def display_characters(characters):
+    click.echo("\nCharacters:")
+    for i, character in enumerate(characters, start=1):
+        click.echo(f"{i}. {character.name}")
 
-def view_season_anime_series(session, season_id):
-    season = session.query(Season).filter_by(id=season_id).first()
-    if season:
-        anime_series = season.anime_series
-        print(f"Anime Series for season '{season.name} ({season.year}'):")
-        for series in anime_series:
-            print(series.title)
-    else:
-        print("Season not found.")
+# Main CLI application
+@click.group()
+def cli():
+    """Anime Tracker CLI"""
+    pass
 
-def find_season_by_name_year(session, name, year):
-    season = session.query(Season).filter(Season.name.like(f"%{name}%"), Season.year == year).first()
-    if season:
-        print(f"Found season: {season}")
-    else:
-        print("Season not found.")
-
-def create_anime_series(session, title, genre, episodes, rating, season_id):
-    anime_series = AnimeSeries(title=title, genre=genre, episodes=episodes, rating=rating, season_id=season_id)
-    session.add(anime_series)
-    session.commit()
-    print(f"Added anime series: {anime_series}")
-
-def delete_anime_series(session, anime_series_id):
-    anime_series = session.query(AnimeSeries).filter_by(id=anime_series_id).first()
-    if anime_series:
-        session.delete(anime_series)
-        session.commit()
-        print(f"Deleted anime series: {anime_series}")
-    else:
-        print("Anime series not found.")
-
-def display_all_anime_series(session):
-    anime_series = session.query(AnimeSeries).all()
-    for series in anime_series:
-        print(series)
-
-def find_anime_series_by_title(session, title):
-    anime_series = session.query(AnimeSeries).filter(AnimeSeries.title.like(f"%{title}%")).first()
-    if anime_series:
-        print(f"Found anime series: {anime_series}")
-    else:
-        print("Anime series not found.")
-
-def main():
-    # Initialize the database
+@cli.command()
+def initialize():
+    """Initialize the database"""
     initialize_database()
+    click.echo("Database initialized successfully.")
 
+@cli.command()
+@click.option('--title', prompt='Enter anime show title')
+@click.option('--genre', prompt='Enter genre')
+@click.option('--total-episodes', prompt='Enter total episodes', type=int)
+def add_show(title, genre, total_episodes):
+    """Add a new anime show"""
     session = get_session()
+    from anime_tracker_db import add_anime_show
+    add_anime_show(session, title, genre, total_episodes)
+    close_connection(session)
 
-    while True:
-        print("\nAnime Tracker Menu:")
-        print("1. Add Season")
-        print("2. Delete Season")
-        print("3. Display All Seasons")
-        print("4. View Anime Series for Season")
-        print("5. Find Season by Name and Year")
-        print("6. Add Anime Series")
-        print("7. Delete Anime Series")
-        print("8. Display All Anime Series")
-        print("9. Find Anime Series by Title")
-        print("10. Exit")
+@cli.command()
+def list_shows():
+    """List all anime shows"""
+    session = get_session()
+    from anime_tracker_db import get_all_anime_shows
+    shows = get_all_anime_shows(session)
+    display_anime_shows(shows)
+    close_connection(session)
 
-        choice = input("Enter your choice (1-10): ")
+@cli.command()
+@click.option('--show-id', prompt='Enter ID of the anime show to delete', type=int)
+def delete_show(show_id):
+    """Delete an anime show"""
+    session = get_session()
+    from anime_tracker_db import delete_anime_show
+    delete_anime_show(session, show_id)
+    close_connection(session)
 
-        if choice == '1':
-            name = input("Enter season name: ")
-            year = int(input("Enter season year: "))
-            create_season(session, name, year)
-        elif choice == '2':
-            season_id = int(input("Enter season ID to delete: "))
-            delete_season(session, season_id)
-        elif choice == '3':
-            display_all_seasons(session)
-        elif choice == '4':
-            season_id = int(input("Enter season ID to view anime series: "))
-            view_season_anime_series(session, season_id)
-        elif choice == '5':
-            name = input("Enter partial season name to search: ")
-            year = int(input("Enter season year: "))
-            find_season_by_name_year(session, name, year)
-        elif choice == '6':
-            title = input("Enter anime series title: ")
-            genre = input("Enter genre: ")
-            episodes = int(input("Enter number of episodes: "))
-            rating = float(input("Enter rating (out of 10): "))
-            season_id = int(input("Enter season ID: "))
-            create_anime_series(session, title, genre, episodes, rating, season_id)
-        elif choice == '7':
-            anime_series_id = int(input("Enter anime series ID to delete: "))
-            delete_anime_series(session, anime_series_id)
-        elif choice == '8':
-            display_all_anime_series(session)
-        elif choice == '9':
-            title = input("Enter partial anime series title to search: ")
-            find_anime_series_by_title(session, title)
-        elif choice == '10':
-            print("Exiting...")
-            close_connection(session)
-            break
-        else:
-            print("Invalid choice. Please try again.")
+@cli.command()
+@click.option('--show-id', prompt='Enter ID of the anime show', type=int)
+@click.option('--episode-number', prompt='Enter episode number', type=int)
+@click.option('--air-date', prompt='Enter air date (YYYY-MM-DD)', type=str)
+def add_episode(show_id, episode_number, air_date):
+    """Add a new episode to an anime show"""
+    session = get_session()
+    from anime_tracker_db import add_episode
+    add_episode(session, show_id, int(episode_number), date.fromisoformat(air_date))
+    close_connection(session)
 
-if __name__ == "__main__":
-    main()
+@cli.command()
+@click.option('--episode-id', prompt='Enter ID of the episode to mark as watched', type=int)
+def watch_episode(episode_id):
+    """Mark an episode as watched"""
+    session = get_session()
+    from anime_tracker_db import mark_episode_watched
+    mark_episode_watched(session, episode_id)
+    close_connection(session)
+
+@cli.command()
+@click.option('--show-id', prompt='Enter ID of the anime show', type=int)
+@click.option('--name', prompt='Enter character name')
+@click.option('--description', prompt='Enter character description')
+def add_character(show_id, name, description):
+    """Add a character to an anime show"""
+    session = get_session()
+    from anime_tracker_db import add_character
+    add_character(session, show_id, name, description)
+    close_connection(session)
+
+@cli.command()
+@click.option('--episode-id', prompt='Enter ID of the episode to rate', type=int)
+@click.option('--rating', prompt='Enter rating (1-10)', type=float)
+def rate(episode_id, rating):
+    """Rate an episode"""
+    session = get_session()
+    from anime_tracker_db import rate_episode
+    rate_episode(session, episode_id, rating)
+    close_connection(session)
+
+@cli.command()
+@click.option('--episode-id', prompt='Enter ID of the episode to review', type=int)
+@click.option('--review', prompt='Enter your review')
+def review(episode_id, review):
+    """Review an episode"""
+    session = get_session()
+    from anime_tracker_db import review_episode
+    review_episode(session, episode_id, review)
+    close_connection(session)
+
+@cli.command()
+@click.option('--show-id', prompt='Enter ID of the anime show', type=int)
+def view_show(show_id):
+    """View details of an anime show"""
+    session = get_session()
+    shows = session.query(AnimeShow).filter_by(id=show_id).all()
+    if shows:
+        show = shows[0]
+        click.echo(f"\n{show.title} ({show.genre})")
+        click.echo(f"Total Episodes: {show.total_episodes}")
+        click.echo(f"Current Episode: {show.current_episode}")
+        
+        episodes = session.query(Episode).filter_by(anime_show_id=show.id).all()
+        display_episodes(episodes)
+        
+        characters = session.query(Character).filter_by(anime_show_id=show.id).all()
+        display_characters(characters)
+    else:
+        click.echo("Anime show not found.")
+    close_connection(session)
+
+def close_connection(session):
+    session.close()
+
+if __name__ == '__main__':
+    cli()
