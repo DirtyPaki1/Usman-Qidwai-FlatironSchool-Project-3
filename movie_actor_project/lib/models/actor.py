@@ -1,7 +1,8 @@
-from lib.helpers import connect_db, validate_nonempty_string, validate_positive_integer
+import sqlite3
+from lib.helpers import validate_age
 
 class Actor:
-    def __init__(self, name, age, movie_id):
+    def __init__(self, name, age, movie_id=None):
         self.name = name
         self.age = age
         self.movie_id = movie_id
@@ -12,8 +13,10 @@ class Actor:
 
     @name.setter
     def name(self, value):
-        validate_nonempty_string(value, "Name")
-        self._name = value
+        if isinstance(value, str) and value.strip():
+            self._name = value
+        else:
+            raise ValueError("Name must be a non-empty string.")
 
     @property
     def age(self):
@@ -21,42 +24,46 @@ class Actor:
 
     @age.setter
     def age(self, value):
-        validate_positive_integer(value, "Age")
-        self._age = value
-
-    @property
-    def movie_id(self):
-        return self._movie_id
-
-    @movie_id.setter
-    def movie_id(self, value):
-        validate_positive_integer(value, "Movie ID")
-        self._movie_id = value
+        self._age = validate_age(value)
 
     @classmethod
-    def create(cls, name, age, movie_id):
-        with connect_db() as conn:
+    def create_table(cls):
+        with sqlite3.connect("lib/movie_actor.db") as conn:
             cursor = conn.cursor()
-            cursor.execute("INSERT INTO actors (name, age, movie_id) VALUES (?, ?, ?)", (name, age, movie_id))
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS actors (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    age INTEGER NOT NULL,
+                    movie_id INTEGER,
+                    FOREIGN KEY (movie_id) REFERENCES movies(id) ON DELETE SET NULL
+                )
+            """)
             conn.commit()
 
-    @classmethod
-    def delete(cls, actor_id):
-        with connect_db() as conn:
+    def save(self):
+        with sqlite3.connect("lib/movie_actor.db") as conn:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM actors WHERE id = ?", (actor_id,))
+            cursor.execute("INSERT INTO actors (name, age, movie_id) VALUES (?, ?, ?)",
+                           (self.name, self.age, self.movie_id))
             conn.commit()
 
     @classmethod
     def get_all(cls):
-        with connect_db() as conn:
+        with sqlite3.connect("lib/movie_actor.db") as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM actors")
             return cursor.fetchall()
 
     @classmethod
     def find_by_id(cls, actor_id):
-        with connect_db() as conn:
+        with sqlite3.connect("lib/movie_actor.db") as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM actors WHERE id = ?", (actor_id,))
             return cursor.fetchone()
+
+    def delete(self):
+        with sqlite3.connect("lib/movie_actor.db") as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM actors WHERE name = ?", (self.name,))
+            conn.commit()

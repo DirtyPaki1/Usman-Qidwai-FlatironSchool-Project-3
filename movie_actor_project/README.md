@@ -1,35 +1,25 @@
+# Movie and Actor Management System
+
 ## Overview
 
-This project is a command-line application for managing a database of movies and actors. It allows users to perform various operations like creating, deleting, and viewing movies and actors, along with managing their relationships in a SQLite database.
+The Movie and Actor Management System is a command-line interface (CLI) application that allows users to manage a database of movies and actors. Users can add, delete, view, and manage movies and their associated actors through a simple and interactive menu-driven interface.
 
 ## Features
 
-- Create, read, update, and delete (CRUD) operations for movies and actors.
-- One-to-many relationship: Each movie can have multiple actors.
-- User-friendly CLI for interacting with the application.
-- Input validation to ensure data integrity.
+- **Add Movies:** Create new entries for movies with titles and release years.
+- **Add Actors:** Add actors with names and birthdates.
+- **View Movies and Actors:** Display all movies and actors in the database.
+- **Delete Movies and Actors:** Remove movies or actors from the database.
+- **View Related Information:** See which actors acted in which movies and vice versa.
 
-## Technologies Used
+## Requirements
 
-- Python 3.12
-- SQLite for the database
+- Python 3.6 or higher
 - Pipenv for dependency management
-- Inquirer for user prompts
 
 ## Installation
 
-1. Clone the repository:
+1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/movie_actor_project.git
+   git clone https://github.com/YourUsername/movie_actor_project.git
    cd movie_actor_project
-
-   
-### Customization
-
-- Replace `yourusername` in the clone URL with your GitHub username or the appropriate URL for your project.
-- Add any additional features, instructions, or acknowledgments as necessary.
-- You can also include screenshots or examples of the CLI in action to make the README more informative.
-
-### Saving the File
-
-Save this content in a file named `README.md` in the root of your project directory. This will provide users with all the necessary information to understand, install, and use your project effectively.
