@@ -41,6 +41,7 @@ class Actor:
             """)
             conn.commit()
 
+
     def save(self):
         with sqlite3.connect("lib/movie_actor.db") as conn:
             cursor = conn.cursor()
