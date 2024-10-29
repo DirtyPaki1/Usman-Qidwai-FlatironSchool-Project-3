@@ -1,5 +1,4 @@
 import sqlite3
-from lib.helpers import validate_age
 
 class Actor:
     def __init__(self, name, age, movie_id=None):
@@ -24,7 +23,10 @@ class Actor:
 
     @age.setter
     def age(self, value):
-        self._age = validate_age(value)
+        if isinstance(value, int) and value > 0:
+            self._age = value
+        else:
+            raise ValueError("Age must be a positive integer.")
 
     @classmethod
     def create_table(cls):
@@ -40,7 +42,6 @@ class Actor:
                 )
             """)
             conn.commit()
-
 
     def save(self):
         with sqlite3.connect("lib/movie_actor.db") as conn:

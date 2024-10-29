@@ -37,6 +37,7 @@ class Movie:
                 )
             """)
             conn.commit()
+
     def save(self):
         with sqlite3.connect("lib/movie_actor.db") as conn:
             cursor = conn.cursor()
@@ -63,9 +64,3 @@ class Movie:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM movies WHERE title = ?", (self.title,))
             conn.commit()
-
-    def get_actors(self):
-        with sqlite3.connect("lib/movie_actor.db") as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM actors WHERE movie_id = ?", (self.id,))
-            return cursor.fetchall()
