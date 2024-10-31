@@ -1,9 +1,10 @@
-def validate_age(value):
-    if value < 0:
-        raise ValueError("Age cannot be negative.")
-    return value
+def format_actor(actor):
+    return f"Actor: {actor.name}, Age: {actor.age}"
 
-def validate_year(value):
-    if value < 1888:  # The first movie was made in 1888
-        raise ValueError("Year cannot be before 1888.")
-    return value
+def format_movie(movie):
+    return f"Movie: {movie.title}, Year: {movie.year}"
+
+def validate_year(year):
+    if not isinstance(year, int) or year < 1888 or year > 2025:
+        raise ValueError("Year must be an integer between 1888 and 2025.")
+    return year

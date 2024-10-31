@@ -1,13 +1,26 @@
 import sqlite3
 
-DATABASE_NAME = 'lib/movie_actor.db'
-
 def get_connection():
-    return sqlite3.connect(DATABASE_NAME)
+    return sqlite3.connect('movie_actor.db')
 
-def create_tables():
-    from lib.models.movie import Movie
-    from lib.models.actor import Actor
-    
-    Movie.create_table()
-    Actor.create_table()
+def initialize_db():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS movies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            year INTEGER NOT NULL
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS actors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            age INTEGER NOT NULL,
+            movie_id INTEGER,
+            FOREIGN KEY (movie_id) REFERENCES movies (id) ON DELETE CASCADE
+        )
+    ''')
+    conn.commit()
+    conn.close()

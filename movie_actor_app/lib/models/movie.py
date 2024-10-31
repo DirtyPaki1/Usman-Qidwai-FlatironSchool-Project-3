@@ -1,20 +1,23 @@
 from lib.database import get_connection
 from lib.helpers import validate_year
+from lib.models.actor import Actor
+
 
 class Movie:
-    def __init__(self, title, year):
+    def __init__(self, title, year, id=None):
+        self.id = id
         self.title = title
         self.year = year
 
-    @classmethod
-    def create_table(cls):
-        with get_connection() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS movies (
-                    title TEXT PRIMARY KEY,
-                    year INTEGER NOT NULL
-                )
-            """)
+    @property
+    def title(self):
+        return self._title
+
+    @title.setter
+    def title(self, value):
+        if not value:
+            raise ValueError("Title cannot be empty.")
+        self._title = value
 
     @property
     def year(self):
@@ -26,26 +29,29 @@ class Movie:
 
     def save(self):
         with get_connection() as conn:
-            conn.execute("INSERT OR REPLACE INTO movies (title, year) VALUES (?, ?)", (self.title, self.year))
+            if self.id is None:
+                conn.execute("INSERT INTO movies (title, year) VALUES (?, ?)", (self.title, self.year))
+                self.id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            else:
+                conn.execute("UPDATE movies SET title = ?, year = ? WHERE id = ?", (self.title, self.year, self.id))
 
     def delete(self):
         with get_connection() as conn:
-            conn.execute("DELETE FROM movies WHERE title = ?", (self.title,))
+            conn.execute("DELETE FROM movies WHERE id = ?", (self.id,))
 
     @classmethod
     def get_all(cls):
         with get_connection() as conn:
-            return [cls(title=row[0], year=row[1]) for row in conn.execute("SELECT title, year FROM movies")]
+            return [cls(id=row[0], title=row[1], year=row[2]) for row in conn.execute("SELECT id, title, year FROM movies")]
 
     @classmethod
     def find_by_title(cls, title):
         with get_connection() as conn:
-            row = conn.execute("SELECT title, year FROM movies WHERE title = ?", (title,)).fetchone()
-            return cls(title=row[0], year=row[1]) if row else None
+            row = conn.execute("SELECT id, title, year FROM movies WHERE title = ?", (title,)).fetchone()
+            return cls(id=row[0], title=row[1], year=row[2]) if row else None
 
     def get_actors(self):
-        from lib.models.actor import Actor
         return Actor.find_by_movie_title(self.title)
 
-    def form(self):
+    def format_movie(self):
         return f"Movie: {self.title}, Year: {self.year}"

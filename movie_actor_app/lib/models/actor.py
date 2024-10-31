@@ -1,23 +1,22 @@
 from lib.database import get_connection
-from lib.helpers import validate_age
+
 
 class Actor:
-    def __init__(self, name, age, movie_title=None):
-        self.name = name
-        self.age = age
-        self.movie_title = movie_title
+    def __init__(self, id=None, name=None, age=None, movie_id=None):
+        self.id = id
+        self._name = name
+        self._age = age
+        self.movie_id = movie_id
 
-    @classmethod
-    def create_table(cls):
-        with get_connection() as conn:
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS actors (
-                    name TEXT PRIMARY KEY,
-                    age INTEGER NOT NULL,
-                    movie_title TEXT,
-                    FOREIGN KEY(movie_title) REFERENCES movies(title) ON DELETE SET NULL
-                )
-            """)
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        if not value:
+            raise ValueError("Actor name cannot be empty.")
+        self._name = value
 
     @property
     def age(self):
@@ -25,31 +24,43 @@ class Actor:
 
     @age.setter
     def age(self, value):
-        self._age = validate_age(value)
+        if not isinstance(value, int) or value < 0:
+            raise ValueError("Actor age must be a non-negative integer.")
+        self._age = value
 
     def save(self):
-        with get_connection() as conn:
-            conn.execute("INSERT OR REPLACE INTO actors (name, age, movie_title) VALUES (?, ?, ?)", (self.name, self.age, self.movie_title))
+        conn = get_connection()
+        cursor = conn.cursor()
+        if self.id is None:
+            cursor.execute("INSERT INTO actors (name, age, movie_id) VALUES (?, ?, ?)", (self.name, self.age, self.movie_id))
+            self.id = cursor.lastrowid
+        else:
+            cursor.execute("UPDATE actors SET name=?, age=?, movie_id=? WHERE id=?", (self.name, self.age, self.movie_id, self.id))
+        conn.commit()
+        conn.close()
 
-    def delete(self):
-        with get_connection() as conn:
-            conn.execute("DELETE FROM actors WHERE name = ?", (self.name,))
+    @classmethod
+    def delete(cls, actor_id):
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM actors WHERE id = ?", (actor_id,))
+        conn.commit()
+        conn.close()
 
     @classmethod
     def get_all(cls):
-        with get_connection() as conn:
-            return [cls(name=row[0], age=row[1], movie_title=row[2]) for row in conn.execute("SELECT name, age, movie_title FROM actors")]
-
-    @classmethod
-    def find_by_name(cls, name):
-        with get_connection() as conn:
-            row = conn.execute("SELECT name, age, movie_title FROM actors WHERE name = ?", (name,)).fetchone()
-            return cls(name=row[0], age=row[1], movie_title=row[2]) if row else None
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, age, movie_id FROM actors")
+        rows = cursor.fetchall()
+        conn.close()
+        return [cls(id=row[0], name=row[1], age=row[2], movie_id=row[3]) for row in rows]
 
     @classmethod
     def find_by_movie_title(cls, movie_title):
-        with get_connection() as conn:
-            return [cls(name=row[0], age=row[1], movie_title=row[2]) for row in conn.execute("SELECT name, age, movie_title FROM actors WHERE movie_title = ?", (movie_title,))]
-
-    def form(self):
-        return f"Actor: {self.name}, Age: {self.age}, Movie Title: {self.movie_title}"
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, age FROM actors WHERE movie_id = (SELECT id FROM movies WHERE title = ?)", (movie_title,))
+        rows = cursor.fetchall()
+        conn.close()
+        return [cls(id=row[0], name=row[1], age=row[2]) for row in rows]
