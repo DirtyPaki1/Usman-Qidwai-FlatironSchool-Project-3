@@ -74,3 +74,12 @@ class Actor:
         row = cursor.fetchone()
         conn.close()
         return cls(name=row[1], age=row[2], movie_id=row[3], id=row[0]) if row else None
+
+@classmethod
+def find_by_movie_id(cls, movie_id):
+    conn = sqlite3.connect('movies_actors.db')
+    cursor = conn.cursor()
+    cursor.execute(f'SELECT * FROM {cls.TABLE_NAME} WHERE movie_id = ?', (movie_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [cls(name=row[1], age=row[2], movie_id=row[3], id=row[0]) for row in rows]

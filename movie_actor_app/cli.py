@@ -56,8 +56,7 @@ def manage_movies():
             title = input("Enter movie title to view associated actors: ").strip()
             movie = Movie.find_by_title(title)
             if movie:
-                actors = Actor.get_all()
-                associated_actors = [a for a in actors if a.movie_id == movie.id]
+                associated_actors = Actor.find_by_movie_id(movie.id)
                 if associated_actors:
                     for i, actor in enumerate(associated_actors, start=1):
                         print(f"{i}. {actor.name}, Age: {actor.age}")
@@ -106,3 +105,17 @@ def manage_actors():
 
 if __name__ == "__main__":
     main_menu()
+
+def display_menu(options):
+    print("\n".join(f"{i + 1}. {option}" for i, option in enumerate(options)))
+
+def validate_integer_input(prompt, min_value=None):
+    while True:
+        try:
+            value = int(input(prompt))
+            if min_value is not None and value < min_value:
+                print(f"Value must be at least {min_value}. Please try again.")
+                continue
+            return value
+        except ValueError:
+            print("Invalid input. Please enter a valid integer.")
