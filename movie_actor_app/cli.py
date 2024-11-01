@@ -7,23 +7,23 @@ def main_menu():
     initialize_tables()  # Create tables at the start
     while True:
         display_menu(["Manage Movies", "Manage Actors", "Exit"])
-        choice = input("Choose an option (1/2/3): ").strip()
+        choice = input("Choose an option: ").strip()
 
         if choice == '1':
             manage_movies()
         elif choice == '2':
             manage_actors()
-        elif choice == '3' or choice.lower() == 'exit':
+        elif choice == '3':  # Exit option
             print("Exiting the application.")
-            break  # Exit the loop and terminate the program
+            break
         else:
             print("Invalid choice. Please try again.")
 
 def manage_movies():
     while True:
         display_menu(["Add Movie", "View All Movies", "Delete Movie", "View Movie's Actors", "Back"])
-        choice = input("Choose an option (1/2/3/4/Back): ").strip()
-        
+        choice = input("Choose an option: ").strip()
+
         if choice == '1':
             title = input("Enter movie title: ").strip()
             year = validate_integer_input("Enter movie year: ", min_value=1888)
@@ -47,7 +47,7 @@ def manage_movies():
                 actors = Actor.get_all()
                 for actor in actors:
                     if actor.movie_id == movie_id:
-                        Actor.delete(actor.id)
+                        Actor.delete(actor.id)  # Use actor.id here
                 Movie.delete(movie_id)
                 print(f"Movie '{movie.title}' and its associated actors deleted.")
             else:
@@ -65,17 +65,16 @@ def manage_movies():
                     print("No actors associated with this movie.")
             else:
                 print("Movie not found.")
-        elif choice.lower() == 'back':
-            print("Returning to main menu...")
-            break  # Go back to the main menu
+        elif choice == '5':  # Back option
+            break
         else:
             print("Invalid choice. Please try again.")
 
 def manage_actors():
     while True:
         display_menu(["Add Actor", "View All Actors", "Delete Actor", "Back"])
-        choice = input("Choose an option (1/2/3/Back): ").strip()
-        
+        choice = input("Choose an option: ").strip()
+
         if choice == '1':
             name = input("Enter actor name: ").strip()
             age = validate_integer_input("Enter actor age: ", min_value=0)
@@ -91,7 +90,7 @@ def manage_actors():
                 print("No actors found.")
             else:
                 for i, actor in enumerate(actors, start=1):
-                    print(f"{i}. {actor.name}, Age: {actor.age}, Movie ID: {actor.movie_id}")
+                    print(f"{i}. {actor.name}, Age: {actor.age}")
         elif choice == '3':
             actor_id = validate_integer_input("Enter actor ID to delete: ")
             actor = Actor.find_by_id(actor_id)
@@ -100,9 +99,8 @@ def manage_actors():
                 print(f"Actor '{actor.name}' deleted.")
             else:
                 print("Actor not found.")
-        elif choice.lower() == 'back':
-            print("Returning to main menu...")
-            break  # Go back to the main menu
+        elif choice == '4':  # Back option
+            break
         else:
             print("Invalid choice. Please try again.")
 

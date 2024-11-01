@@ -1,53 +1,77 @@
 import sqlite3
 
 class Movie:
-    def __init__(self, title, year):
-        self.title = title
-        self.year = year
+    TABLE_NAME = 'movies'
+
+    def __init__(self, title, year, id=None):
+        self._id = id
+        self._title = title
+        self._year = year
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def title(self):
+        return self._title
+
+    @title.setter
+    def title(self, value):
+        if not value:
+            raise ValueError("Title cannot be empty.")
+        self._title = value
+
+    @property
+    def year(self):
+        return self._year
+
+    @year.setter
+    def year(self, value):
+        if value < 1888:
+            raise ValueError("Year must be 1888 or later.")
+        self._year = value
 
     @classmethod
     def create(cls, title, year):
+        movie = cls(title, year)
         conn = sqlite3.connect('movies_actors.db')
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO movies (title, year) VALUES (?, ?)", (title, year))
-        conn.commit()
+        with conn:
+            cursor = conn.execute(f'INSERT INTO {cls.TABLE_NAME} (title, year) VALUES (?, ?)', (movie.title, movie.year))
+            movie._id = cursor.lastrowid  # Set the ID of the movie from the last insert
         conn.close()
-
-    @classmethod
-    def delete(cls, movie_id):
-        conn = sqlite3.connect('movies_actors.db')
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM movies WHERE id=?", (movie_id,))
-        conn.commit()
-        conn.close()
+        return movie  # Return the newly created movie object
 
     @classmethod
     def get_all(cls):
         conn = sqlite3.connect('movies_actors.db')
         cursor = conn.cursor()
-        cursor.execute("SELECT id, title, year FROM movies")
-        movies = [cls(row[1], row[2]) for row in cursor.fetchall()]
+        cursor.execute(f'SELECT * FROM {cls.TABLE_NAME}')
+        movies = cursor.fetchall()
         conn.close()
-        return movies
+        return [cls(title=row[1], year=row[2], id=row[0]) for row in movies]  # Include id in the returned object
 
     @classmethod
-    def find_by_id(cls, movie_id):
+    def delete(cls, movie_id):
         conn = sqlite3.connect('movies_actors.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT title, year FROM movies WHERE id=?", (movie_id,))
-        row = cursor.fetchone()
+        with conn:
+            conn.execute(f'DELETE FROM {cls.TABLE_NAME} WHERE id = ?', (movie_id,))
         conn.close()
-        if row:
-            return cls(row[0], row[1])
-        return None
 
     @classmethod
     def find_by_title(cls, title):
         conn = sqlite3.connect('movies_actors.db')
         cursor = conn.cursor()
-        cursor.execute("SELECT id, year FROM movies WHERE title=?", (title,))
+        cursor.execute(f'SELECT * FROM {cls.TABLE_NAME} WHERE title = ?', (title,))
         row = cursor.fetchone()
         conn.close()
-        if row:
-            return cls(row[0], row[1])
-        return None
+        return cls(title=row[1], year=row[2], id=row[0]) if row else None
+
+    @classmethod
+    def find_by_id(cls, movie_id):
+        conn = sqlite3.connect('movies_actors.db')
+        cursor = conn.cursor()
+        cursor.execute(f'SELECT * FROM {cls.TABLE_NAME} WHERE id = ?', (movie_id,))
+        row = cursor.fetchone()
+        conn.close()
+        return cls(title=row[1], year=row[2], id=row[0]) if row else None
