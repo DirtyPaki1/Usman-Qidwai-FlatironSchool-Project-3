@@ -31,3 +31,4 @@ This is a Python command-line interface (CLI) application for managing movies an
 - Follow the on-screen prompts to manage movies and actors.
 - You can add movies, add actors (associated with a movie), view all movies and actors, and delete actors and movies.
 
+#So i have to find_by_id for both classes and have to add it to the model, i have to delte actors before deleting the movie,do not have any refrences to the id in the front-end and look at nancys note page.

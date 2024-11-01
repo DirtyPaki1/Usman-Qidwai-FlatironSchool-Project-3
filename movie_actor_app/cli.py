@@ -1,129 +1,110 @@
-from lib.database import initialize_db
-from lib.models.actor import Actor
+from lib import initialize_tables
 from lib.models.movie import Movie
-from lib.helpers import format_actor, format_movie
-
+from lib.models.actor import Actor
+from lib.helpers import display_menu, validate_integer_input
 
 def main_menu():
-    initialize_db()
+    initialize_tables()  # Create tables at the start
     while True:
-        print("\n--- Main Menu ---")
-        print("1. Manage Movies")
-        print("2. Manage Actors")
-        print("3. Exit")
-
-        choice = input("Select an option: ")
+        display_menu(["Manage Movies", "Manage Actors", "Exit"])
+        choice = input("Choose an option (1/2/3): ").strip()
 
         if choice == '1':
             manage_movies()
         elif choice == '2':
             manage_actors()
-        elif choice == '3':
-            print("Exiting application.")
-            break
+        elif choice == '3' or choice.lower() == 'exit':
+            print("Exiting the application.")
+            break  # Exit the loop and terminate the program
         else:
-            print("Invalid option. Please try again.")
-
+            print("Invalid choice. Please try again.")
 
 def manage_movies():
     while True:
-        print("\n--- Manage Movies ---")
-        print("1. Add Movie")
-        print("2. View All Movies")
-        print("3. Add Actor to Movie")
-        print("4. Delete Actor from Movie")
-        print("5. Delete Movie")
-        print("6. Go Back")
-
-        choice = input("Select an option: ")
-
+        display_menu(["Add Movie", "View All Movies", "Delete Movie", "View Movie's Actors", "Back"])
+        choice = input("Choose an option (1/2/3/4/Back): ").strip()
+        
         if choice == '1':
-            title = input("Enter movie title: ")
-            year = int(input("Enter movie year: "))
-            movie = Movie(title=title, year=year)
-            movie.save()
-            print(f"Movie '{movie.title}' added.")
-
+            title = input("Enter movie title: ").strip()
+            year = validate_integer_input("Enter movie year: ", min_value=1888)
+            try:
+                Movie.create(title, year)
+                print(f"Movie '{title}' added.")
+            except ValueError as e:
+                print(e)
         elif choice == '2':
             movies = Movie.get_all()
-            for movie in movies:
-                print(format_movie(movie))
-                actors = movie.get_actors()
-                if actors:
-                    for actor in actors:
-                        print(f"  {format_actor(actor)}")
-                else:
-                    print("  No actors associated with this movie.")
-
+            if not movies:
+                print("No movies found.")
+            else:
+                for i, movie in enumerate(movies, start=1):
+                    print(f"{i}. {movie.title} ({movie.year})")
         elif choice == '3':
-            movie_title = input("Enter movie title to add actor to: ")
-            movie = Movie.find_by_title(movie_title)
+            movie_id = validate_integer_input("Enter movie ID to delete: ")
+            movie = Movie.find_by_id(movie_id)
             if movie:
-                name = input("Enter actor name: ")
-                age = int(input("Enter actor age: "))
-                actor = Actor(name=name, age=age, movie_id=movie.id)
-                actor.save()
-                print(f"Actor '{actor.name}' added to movie '{movie.title}'.")
+                # First delete all actors associated with this movie
+                actors = Actor.get_all()
+                for actor in actors:
+                    if actor.movie_id == movie_id:
+                        Actor.delete(actor.id)
+                Movie.delete(movie_id)
+                print(f"Movie '{movie.title}' and its associated actors deleted.")
             else:
                 print("Movie not found.")
-
         elif choice == '4':
-            movie_title = input("Enter movie title to delete actor from: ")
-            movie = Movie.find_by_title(movie_title)
-            if movie:
-                actor_id = int(input("Enter actor ID to delete: "))
-                Actor.delete(actor_id)
-                print(f"Actor with ID {actor_id} deleted from movie '{movie.title}'.")
-            else:
-                print("Movie not found.")
-
-        elif choice == '5':
-            title = input("Enter movie title to delete: ")
+            title = input("Enter movie title to view associated actors: ").strip()
             movie = Movie.find_by_title(title)
             if movie:
-                movie.delete()
-                print(f"Movie '{movie.title}' deleted along with its actors.")
+                actors = Actor.get_all()
+                associated_actors = [a for a in actors if a.movie_id == movie.id]
+                if associated_actors:
+                    for i, actor in enumerate(associated_actors, start=1):
+                        print(f"{i}. {actor.name}, Age: {actor.age}")
+                else:
+                    print("No actors associated with this movie.")
             else:
                 print("Movie not found.")
-
-        elif choice == '6':
-            break
-
+        elif choice.lower() == 'back':
+            print("Returning to main menu...")
+            break  # Go back to the main menu
+        else:
+            print("Invalid choice. Please try again.")
 
 def manage_actors():
     while True:
-        print("\n--- Manage Actors ---")
-        print("1. Add Actor")
-        print("2. Delete Actor")
-        print("3. View All Actors")
-        print("4. Go Back")
-
-        choice = input("Select an option: ")
-
+        display_menu(["Add Actor", "View All Actors", "Delete Actor", "Back"])
+        choice = input("Choose an option (1/2/3/Back): ").strip()
+        
         if choice == '1':
-            name = input("Enter actor name: ")
-            age = int(input("Enter actor age: "))
-            movie_title = input("Enter associated movie title (optional): ")
-            movie = Movie.find_by_title(movie_title) if movie_title else None
-            movie_id = movie.id if movie else None
-            
-            actor = Actor(name=name, age=age, movie_id=movie_id)
-            actor.save()
-            print(f"Actor '{actor.name}' added.")
-
+            name = input("Enter actor name: ").strip()
+            age = validate_integer_input("Enter actor age: ", min_value=0)
+            movie_id = validate_integer_input("Enter movie ID the actor belongs to: ")
+            try:
+                Actor.create(name, age, movie_id)
+                print(f"Actor '{name}' added.")
+            except ValueError as e:
+                print(e)
         elif choice == '2':
-            actor_id = int(input("Enter actor ID to delete: "))
-            Actor.delete(actor_id)
-            print(f"Actor with ID {actor_id} deleted.")
-
-        elif choice == '3':
             actors = Actor.get_all()
-            for actor in actors:
-                print(format_actor(actor))
+            if not actors:
+                print("No actors found.")
+            else:
+                for i, actor in enumerate(actors, start=1):
+                    print(f"{i}. {actor.name}, Age: {actor.age}, Movie ID: {actor.movie_id}")
+        elif choice == '3':
+            actor_id = validate_integer_input("Enter actor ID to delete: ")
+            actor = Actor.find_by_id(actor_id)
+            if actor:
+                Actor.delete(actor_id)
+                print(f"Actor '{actor.name}' deleted.")
+            else:
+                print("Actor not found.")
+        elif choice.lower() == 'back':
+            print("Returning to main menu...")
+            break  # Go back to the main menu
+        else:
+            print("Invalid choice. Please try again.")
 
-        elif choice == '4':
-            break
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main_menu()
