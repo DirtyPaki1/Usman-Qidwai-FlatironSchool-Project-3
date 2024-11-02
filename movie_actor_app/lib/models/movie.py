@@ -38,9 +38,9 @@ class Movie:
         conn = sqlite3.connect('movies_actors.db')
         with conn:
             cursor = conn.execute(f'INSERT INTO {cls.TABLE_NAME} (title, year) VALUES (?, ?)', (movie.title, movie.year))
-            movie._id = cursor.lastrowid  # Set the ID of the movie from the last insert
+            movie._id = cursor.lastrowid
         conn.close()
-        return movie  # Return the newly created movie object
+        return movie
 
     @classmethod
     def get_all(cls):
@@ -49,7 +49,7 @@ class Movie:
         cursor.execute(f'SELECT * FROM {cls.TABLE_NAME}')
         movies = cursor.fetchall()
         conn.close()
-        return [cls(title=row[1], year=row[2], id=row[0]) for row in movies]  # Include id in the returned object
+        return [cls(title=row[1], year=row[2], id=row[0]) for row in movies]
 
     @classmethod
     def delete(cls, movie_id):
@@ -75,3 +75,13 @@ class Movie:
         row = cursor.fetchone()
         conn.close()
         return cls(title=row[1], year=row[2], id=row[0]) if row else None
+
+    def get_actors(self):
+        # Dynamically import Actor here to avoid circular import
+        from lib.models.actor import Actor
+        conn = sqlite3.connect('movies_actors.db')
+        cursor = conn.cursor()
+        cursor.execute(f'SELECT * FROM {Actor.TABLE_NAME} WHERE movie_id = ?', (self.id,))
+        actors = cursor.fetchall()
+        conn.close()
+        return [Actor(name=row[1], age=row[2], movie_id=row[3], id=row[0]) for row in actors]

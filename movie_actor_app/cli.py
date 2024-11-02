@@ -40,25 +40,26 @@ def manage_movies():
                 for i, movie in enumerate(movies, start=1):
                     print(f"{i}. {movie.title} ({movie.year})")
         elif choice == '3':
-            movie_id = validate_integer_input("Enter movie ID to delete: ")
-            movie = Movie.find_by_id(movie_id)
-            if movie:
-                # First delete all actors associated with this movie
-                actors = Actor.get_all()
-                for actor in actors:
-                    if actor.movie_id == movie_id:
-                        Actor.delete(actor.id)  # Use actor.id here
-                Movie.delete(movie_id)
-                print(f"Movie '{movie.title}' and its associated actors deleted.")
+            movies = Movie.get_all()
+            if not movies:
+                print("No movies found.")
             else:
-                print("Movie not found.")
+                for i, movie in enumerate(movies, start=1):
+                    print(f"{i}. {movie.title} ({movie.year})")
+                movie_title = input("Enter the title of the movie to delete: ").strip()
+                movie = next((m for m in movies if m.title.lower() == movie_title.lower()), None)
+                if movie:
+                    movie.delete()
+                    print(f"Movie '{movie.title}' and its associated actors deleted.")
+                else:
+                    print("Movie not found.")
         elif choice == '4':
-            title = input("Enter movie title to view associated actors: ").strip()
-            movie = Movie.find_by_title(title)
+            movie_title = input("Enter the title of the movie to view associated actors: ").strip()
+            movie = next((m for m in Movie.get_all() if m.title.lower() == movie_title.lower()), None)
             if movie:
-                associated_actors = Actor.find_by_movie_id(movie.id)
-                if associated_actors:
-                    for i, actor in enumerate(associated_actors, start=1):
+                actors = movie.get_actors()
+                if actors:
+                    for i, actor in enumerate(actors, start=1):
                         print(f"{i}. {actor.name}, Age: {actor.age}")
                 else:
                     print("No actors associated with this movie.")
@@ -77,12 +78,27 @@ def manage_actors():
         if choice == '1':
             name = input("Enter actor name: ").strip()
             age = validate_integer_input("Enter actor age: ", min_value=0)
-            movie_id = validate_integer_input("Enter movie ID the actor belongs to: ")
+            movies = Movie.get_all()
+            if not movies:
+                print("No movies found. Please add a movie before adding actors.")
+                continue
+
+            print("Available Movies:")
+            for i, movie in enumerate(movies, start=1):
+                print(f"{i}. {movie.title} ({movie.year})")
+                
+            movie_title = input("Enter the title of the movie the actor belongs to: ").strip()
+            movie = next((m for m in movies if m.title.lower() == movie_title.lower()), None)
+            if not movie:
+                print("Movie not found. Cannot add actor to a non-existent movie.")
+                continue
+            
             try:
-                Actor.create(name, age, movie_id)
-                print(f"Actor '{name}' added.")
+                Actor.create(name, age, movie)
+                print(f"Actor '{name}' added to movie '{movie.title}'.")
             except ValueError as e:
                 print(e)
+                
         elif choice == '2':
             actors = Actor.get_all()
             if not actors:
@@ -91,10 +107,10 @@ def manage_actors():
                 for i, actor in enumerate(actors, start=1):
                     print(f"{i}. {actor.name}, Age: {actor.age}")
         elif choice == '3':
-            actor_id = validate_integer_input("Enter actor ID to delete: ")
-            actor = Actor.find_by_id(actor_id)
+            actor_name = input("Enter the name of the actor to delete: ").strip()
+            actor = next((a for a in Actor.get_all() if a.name.lower() == actor_name.lower()), None)
             if actor:
-                Actor.delete(actor_id)
+                actor.delete()
                 print(f"Actor '{actor.name}' deleted.")
             else:
                 print("Actor not found.")
@@ -105,17 +121,3 @@ def manage_actors():
 
 if __name__ == "__main__":
     main_menu()
-
-def display_menu(options):
-    print("\n".join(f"{i + 1}. {option}" for i, option in enumerate(options)))
-
-def validate_integer_input(prompt, min_value=None):
-    while True:
-        try:
-            value = int(input(prompt))
-            if min_value is not None and value < min_value:
-                print(f"Value must be at least {min_value}. Please try again.")
-                continue
-            return value
-        except ValueError:
-            print("Invalid input. Please enter a valid integer.")

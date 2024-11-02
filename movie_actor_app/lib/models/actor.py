@@ -1,4 +1,5 @@
 import sqlite3
+from lib.models.movie import Movie
 class Actor:
     TABLE_NAME = 'actors'
 
@@ -36,19 +37,18 @@ class Actor:
     def movie_id(self):
         return self._movie_id
 
-    @movie_id.setter
-    def movie_id(self, value):
-        self._movie_id = value
-
     @classmethod
-    def create(cls, name, age, movie_id):
-        actor = cls(name, age, movie_id)
+    def create(cls, name, age, movie):
+        if not isinstance(movie, Movie):
+            raise ValueError("Movie does not exist. Cannot add actor to a non-existent movie.")
+        actor = cls(name, age, movie.id)
         conn = sqlite3.connect('movies_actors.db')
         with conn:
-            cursor = conn.execute(f'INSERT INTO {cls.TABLE_NAME} (name, age, movie_id) VALUES (?, ?, ?)', (actor.name, actor.age, actor.movie_id))
-            actor._id = cursor.lastrowid  # Set the ID of the actor from the last insert
+            cursor = conn.execute(f'INSERT INTO {cls.TABLE_NAME} (name, age, movie_id) VALUES (?, ?, ?)', 
+                                  (actor.name, actor.age, actor.movie_id))
+            actor._id = cursor.lastrowid
         conn.close()
-        return actor  # Return the newly created actor object
+        return actor
 
     @classmethod
     def get_all(cls):
@@ -57,7 +57,7 @@ class Actor:
         cursor.execute(f'SELECT * FROM {cls.TABLE_NAME}')
         actors = cursor.fetchall()
         conn.close()
-        return [cls(name=row[1], age=row[2], movie_id=row[3], id=row[0]) for row in actors]  # Include id in the returned object
+        return [cls(name=row[1], age=row[2], movie_id=row[3], id=row[0]) for row in actors]
 
     @classmethod
     def delete(cls, actor_id):
@@ -74,12 +74,3 @@ class Actor:
         row = cursor.fetchone()
         conn.close()
         return cls(name=row[1], age=row[2], movie_id=row[3], id=row[0]) if row else None
-
-@classmethod
-def find_by_movie_id(cls, movie_id):
-    conn = sqlite3.connect('movies_actors.db')
-    cursor = conn.cursor()
-    cursor.execute(f'SELECT * FROM {cls.TABLE_NAME} WHERE movie_id = ?', (movie_id,))
-    rows = cursor.fetchall()
-    conn.close()
-    return [cls(name=row[1], age=row[2], movie_id=row[3], id=row[0]) for row in rows]
