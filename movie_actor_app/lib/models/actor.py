@@ -1,77 +1,53 @@
 import sqlite3
-from lib.models.movie import Movie
+from lib.database import DATABASE_NAME
+from lib.models.movie import Movie  # Import the Movie class
+
 class Actor:
-    TABLE_NAME = 'actors'
-
-    def __init__(self, name, age, movie_id, id=None):
-     self.id = id
-     self.name = name
-     self.age = age
-     self.movie_id = movie_id
-
-
-    @property
-    def id(self):
-        return self._id
+    def __init__(self, name, age, movie_id=None, id=None):
+        self._id = id  # Internal ID for ORM use
+        self._name = name
+        self._age = age
+        self._movie_id = movie_id
 
     @property
     def name(self):
         return self._name
 
-    @name.setter
-    def name(self, value):
-        if not value:
-            raise ValueError("Name cannot be empty.")
-        self._name = value
-
     @property
     def age(self):
         return self._age
 
-    @age.setter
-    def age(self, value):
-        if value < 0:
-            raise ValueError("Age cannot be negative.")
-        self._age = value
-
-    @property
-    def movie_id(self):
-        return self._movie_id
+    @classmethod
+    def create(cls, name, age, movie_title):
+        """Create a new actor in the database."""
+        movie = Movie.find_by_title(movie_title)  # Reference to the Movie class
+        if not movie:
+            raise ValueError("Cannot add an actor to a movie that does not exist.")
+        
+        conn = sqlite3.connect(DATABASE_NAME)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO actors (name, age, movie_id) VALUES (?, ?, ?)", (name, age, movie._id))
+        conn.commit()
+        conn.close()
 
     @classmethod
-    def create(cls, name, age, movie):
-        if not isinstance(movie, Movie):
-            raise ValueError("Movie does not exist. Cannot add actor to a non-existent movie.")
-        actor = cls(name, age, movie.id)
-        conn = sqlite3.connect('movies_actors.db')
-        with conn:
-            cursor = conn.execute(f'INSERT INTO {cls.TABLE_NAME} (name, age, movie_id) VALUES (?, ?, ?)', 
-                                  (actor.name, actor.age, actor.movie_id))
-            actor._id = cursor.lastrowid
+    def delete(cls, name):
+        """Delete an actor by name."""
+        conn = sqlite3.connect(DATABASE_NAME)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM actors WHERE name = ?", (name,))
+        conn.commit()
         conn.close()
-        return actor
 
     @classmethod
     def get_all(cls):
-        conn = sqlite3.connect('movies_actors.db')
+        """Retrieve all actors."""
+        conn = sqlite3.connect(DATABASE_NAME)
         cursor = conn.cursor()
-        cursor.execute(f'SELECT * FROM {cls.TABLE_NAME}')
+        cursor.execute("SELECT * FROM actors")
         actors = cursor.fetchall()
         conn.close()
-        return [cls(name=row[1], age=row[2], movie_id=row[3], id=row[0]) for row in actors]
+        return [cls(id=row[0], name=row[1], age=row[2], movie_id=row[3]) for row in actors]
 
-    @classmethod
-    def delete(cls, actor_id):
-        conn = sqlite3.connect('movies_actors.db')
-        with conn:
-            conn.execute(f'DELETE FROM {cls.TABLE_NAME} WHERE id = ?', (actor_id,))
-        conn.close()
-
-    @classmethod
-    def find_by_id(cls, actor_id):
-        conn = sqlite3.connect('movies_actors.db')
-        cursor = conn.cursor()
-        cursor.execute(f'SELECT * FROM {cls.TABLE_NAME} WHERE id = ?', (actor_id,))
-        row = cursor.fetchone()
-        conn.close()
-        return cls(name=row[1], age=row[2], movie_id=row[3], id=row[0]) if row else None
+    def __str__(self):
+        return f"{self.name}, Age: {self.age}"

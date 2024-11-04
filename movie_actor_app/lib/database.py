@@ -3,6 +3,7 @@ import sqlite3
 DATABASE_NAME = "movies_actors.db"
 
 def initialize_database():
+    """Initialize the database and create tables."""
     conn = sqlite3.connect(DATABASE_NAME)
     with conn:
         conn.execute('''

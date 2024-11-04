@@ -1,87 +1,79 @@
 import sqlite3
+from lib.database import DATABASE_NAME
 
 class Movie:
-    TABLE_NAME = 'movies'
-
     def __init__(self, title, year, id=None):
-        self.id = id
-        self.title = title
-        self.year = year
-
-    @property
-    def id(self):
-        return self._id
+        self._id = id  # Internal ID for ORM use
+        self._title = title
+        self._year = year
 
     @property
     def title(self):
         return self._title
 
-    @title.setter
-    def title(self, value):
-        if not value:
-            raise ValueError("Title cannot be empty.")
-        self._title = value
-
     @property
     def year(self):
         return self._year
 
-    @year.setter
-    def year(self, value):
-        if value < 1888:
-            raise ValueError("Year must be 1888 or later.")
-        self._year = value
-
     @classmethod
     def create(cls, title, year):
-        movie = cls(title, year)
-        conn = sqlite3.connect('movies_actors.db')
-        with conn:
-            cursor = conn.execute(f'INSERT INTO {cls.TABLE_NAME} (title, year) VALUES (?, ?)', (movie.title, movie.year))
-            movie._id = cursor.lastrowid
+        """Create a new movie in the database."""
+        conn = sqlite3.connect(DATABASE_NAME)
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO movies (title, year) VALUES (?, ?)", (title, year))
+        conn.commit()
         conn.close()
-        return movie
 
     @classmethod
     def get_all(cls):
-        conn = sqlite3.connect('movies_actors.db')
+        """Retrieve all movies."""
+        conn = sqlite3.connect(DATABASE_NAME)
         cursor = conn.cursor()
-        cursor.execute(f'SELECT * FROM {cls.TABLE_NAME}')
+        cursor.execute("SELECT * FROM movies")
         movies = cursor.fetchall()
         conn.close()
         return [cls(title=row[1], year=row[2], id=row[0]) for row in movies]
 
     @classmethod
-    def delete(cls, movie_id):
-        conn = sqlite3.connect('movies_actors.db')
-        with conn:
-            conn.execute(f'DELETE FROM {cls.TABLE_NAME} WHERE id = ?', (movie_id,))
-        conn.close()
-
-    @classmethod
     def find_by_title(cls, title):
-        conn = sqlite3.connect('movies_actors.db')
+        """Find a movie by title."""
+        conn = sqlite3.connect(DATABASE_NAME)
         cursor = conn.cursor()
-        cursor.execute(f'SELECT * FROM {cls.TABLE_NAME} WHERE title = ?', (title,))
-        row = cursor.fetchone()
+        cursor.execute("SELECT * FROM movies WHERE title = ?", (title,))
+        result = cursor.fetchone()
         conn.close()
-        return cls(title=row[1], year=row[2], id=row[0]) if row else None
+        if result:
+            return cls(title=result[1], year=result[2], id=result[0])
+        return None
 
     @classmethod
-    def find_by_id(cls, movie_id):
-        conn = sqlite3.connect('movies_actors.db')
+    def delete(cls, title):
+        """Delete a movie and its associated actors by title."""
+        conn = sqlite3.connect(DATABASE_NAME)
         cursor = conn.cursor()
-        cursor.execute(f'SELECT * FROM {cls.TABLE_NAME} WHERE id = ?', (movie_id,))
-        row = cursor.fetchone()
+        cursor.execute("DELETE FROM actors WHERE movie_id = (SELECT id FROM movies WHERE title = ?)", (title,))
+        cursor.execute("DELETE FROM movies WHERE title = ?", (title,))
+        conn.commit()
         conn.close()
-        return cls(title=row[1], year=row[2], id=row[0]) if row else None
 
-    def get_actors(self):
-        # Dynamically import Actor here to avoid circular import
-        from lib.models.actor import Actor
-        conn = sqlite3.connect('movies_actors.db')
+     
+    
+
+
+
+    def get_associated_actors(self):
+        """Retrieve all actors associated with this movie."""
+        conn = sqlite3.connect(DATABASE_NAME)
         cursor = conn.cursor()
-        cursor.execute(f'SELECT * FROM {Actor.TABLE_NAME} WHERE movie_id = ?', (self.id,))
+        cursor.execute("SELECT * FROM actors WHERE movie_id = (SELECT id FROM movies WHERE title = ?)", (self.title,))
         actors = cursor.fetchall()
         conn.close()
-        return [Actor(name=row[1], age=row[2], movie_id=row[3], id=row[0]) for row in actors]
+        return [actors(id=row[0], name=row[1], age=row[2], movie_id=row[3]) for row in actors]
+
+    
+
+
+    def __str__(self):
+        return f"{self.title} ({self.year})"
+ 
+
