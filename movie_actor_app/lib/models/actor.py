@@ -4,10 +4,11 @@ class Actor:
     TABLE_NAME = 'actors'
 
     def __init__(self, name, age, movie_id, id=None):
-        self._id = id
-        self._name = name
-        self._age = age
-        self._movie_id = movie_id
+     self.id = id
+     self.name = name
+     self.age = age
+     self.movie_id = movie_id
+
 
     @property
     def id(self):
