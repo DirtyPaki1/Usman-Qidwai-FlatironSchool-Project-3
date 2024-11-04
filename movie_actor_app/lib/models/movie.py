@@ -4,9 +4,9 @@ class Movie:
     TABLE_NAME = 'movies'
 
     def __init__(self, title, year, id=None):
-        self._id = id
-        self._title = title
-        self._year = year
+        self.id = id
+        self.title = title
+        self.year = year
 
     @property
     def id(self):
